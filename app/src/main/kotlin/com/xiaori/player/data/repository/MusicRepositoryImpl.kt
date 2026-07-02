@@ -1,70 +1,40 @@
-// FILE: XiaoRiPlayer/app/src/main/kotlin/com/xiaori/player/data/repository/MusicRepositoryImpl.kt
 package com.xiaori.player.data.repository
 
-import com.xiaori.player.data.datasource.remote.YoutubeMusicRemoteDataSource
-import com.xiaori.player.domain.model.Album
-import com.xiaori.player.domain.model.Artist
-import com.xiaori.player.domain.model.SearchResult
+import com.music.innertube.YouTube
+import com.music.innertube.models.SongItem
 import com.xiaori.player.domain.model.Song
 import com.xiaori.player.domain.repository.MusicRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
+import javax.inject.Singleton
 
-class MusicRepositoryImpl @Inject constructor(
-    private val remoteDataSource: YoutubeMusicRemoteDataSource
-) : MusicRepository {
+@Singleton
+class MusicRepositoryImpl @Inject constructor() : MusicRepository {
 
-    override fun search(query: String): Flow<Result<SearchResult>> = flow {
-        val result = remoteDataSource.search(query)
-        emit(result.map { response ->
-            SearchResult(
-                songs = response.contents?.tabbedSearchResultsRenderer?.tabs
-                    ?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents
-                    ?.flatMap { section ->
-                        section.musicShelfRenderer?.contents?.mapNotNull { content ->
-                            content.musicResponsiveListItemRenderer?.let { item ->
-                                Song(
-                                    id = item.playlistItemData?.videoId ?: "",
-                                    title = item.flexColumns?.firstOrNull()?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()?.text ?: "",
-                                    artist = item.flexColumns?.getOrNull(1)?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()?.text ?: "",
-                                    album = item.flexColumns?.getOrNull(2)?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()?.text ?: "",
-                                    artworkUrl = item.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails?.firstOrNull()?.url ?: "",
-                                    durationMs = 0L, // Would parse from runs
-                                    streamUrl = "" // Will fetch on-demand
-                                )
-                            }
-                        } ?: emptyList()
-                    } ?: emptyList(),
-                artists = emptyList(), // Simplified mapping
-                albums = emptyList()   // Simplified mapping
-            )
-        })
+    override suspend fun search(query: String): List<Song> {
+        return try {
+            val result = YouTube.search(query, YouTube.SearchFilter.FILTER_SONG).getOrThrow()
+            result.items.filterIsInstance<SongItem>().map { songItem ->
+                Song(
+                    id = songItem.id,
+                    title = songItem.title,
+                    artists = songItem.artists.joinToString(", ") { it.name },
+                    thumbnailUrl = songItem.thumbnail?.url
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
-    override fun getHomeContent(): Flow<Result<List<Song>>> = flow {
-        val result = remoteDataSource.getHomeContent()
-        emit(result.map { response ->
-            response.contents?.singleColumnBrowseResultsRenderer?.tabs
-                ?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents
-                ?.flatMap { section ->
-                    section.musicCarouselShelfRenderer?.contents?.mapNotNull { content ->
-                        content.musicResponsiveListItemRenderer?.let { item ->
-                            Song(
-                                id = item.playlistItemData?.videoId ?: "",
-                                title = item.flexColumns?.firstOrNull()?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()?.text ?: "",
-                                artist = item.flexColumns?.getOrNull(1)?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()?.text ?: "",
-                                album = item.flexColumns?.getOrNull(2)?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()?.text ?: "",
-                                artworkUrl = item.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails?.firstOrNull()?.url ?: "",
-                                durationMs = 0L,
-                                streamUrl = ""
-                            )
-                        }
-                    } ?: emptyList()
-                } ?: emptyList()
-        })
+    override suspend fun getStreamUrl(videoId: String): String? {
+        return try {
+            val playerResponse = YouTube.player(videoId = videoId).getOrThrow()
+            playerResponse.streamingData?.adaptiveFormats
+                ?.filter { it.mimeType.startsWith("audio") }
+                ?.maxByOrNull { it.bitrate }
+                ?.url
+        } catch (e: Exception) {
+            null
+        }
     }
-
-    override suspend fun getSongStreamUrl(videoId: String): Result<String> =
-        remoteDataSource.getSongStreamUrl(videoId)
 }
