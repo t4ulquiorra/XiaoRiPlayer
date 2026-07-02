@@ -1,10 +1,10 @@
-// FILE: XiaoRiPlayer/app/src/main/kotlin/com/xiaori/player/di/AppModule.kt
 package com.xiaori.player.di
 
 import android.content.Context
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
-import com.xiaori.player.playback.PlaybackManager
+import com.xiaori.player.data.repository.MusicRepositoryImpl
+import com.xiaori.player.domain.repository.MusicRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,8 +30,5 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun providePlaybackManager(
-        player: ExoPlayer,
-        mediaSession: MediaSession
-    ): PlaybackManager = PlaybackManager(player, mediaSession)
+    fun provideMusicRepository(): MusicRepository = MusicRepositoryImpl()
 }

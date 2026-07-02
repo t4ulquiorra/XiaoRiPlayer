@@ -1,8 +1,8 @@
-// FILE: XiaoRiPlayer/app/src/main/kotlin/com/xiaori/player/ui/screens/search/SearchScreen.kt
 package com.xiaori.player.ui.screens.search
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,7 +28,7 @@ fun SearchScreen(
             .padding(bottom = 80.dp)
     ) {
         OutlinedTextField(
-            value = uiState.searchResult?.let { "" } ?: "",
+            value = uiState.searchText,
             onValueChange = viewModel::onSearchQueryChanged,
             placeholder = { Text("Search songs, artists, albums") },
             modifier = Modifier
@@ -39,22 +39,20 @@ fun SearchScreen(
         if (uiState.isLoading) {
             Text("Searching...")
         } else {
-            uiState.searchResult?.songs?.let { songs ->
-                Text(
-                    text = "Songs",
-                    style = Typography.titleLarge,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-                LazyColumn(
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                ) {
-                    items(songs, key = { it.id }) { song ->
-                        SongCard(
-                            song = song,
-                            modifier = Modifier.padding(vertical = 4.dp),
-                            onClick = { onSongClick(song) }
-                        )
-                    }
+            Text(
+                text = "Songs",
+                style = Typography.titleLarge,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            LazyColumn(
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
+                items(uiState.songs, key = { it.id }) { song ->
+                    SongCard(
+                        song = song,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        onClick = { onSongClick(song) }
+                    )
                 }
             }
         }

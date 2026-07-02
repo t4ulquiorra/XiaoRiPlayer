@@ -17,13 +17,20 @@ class MusicRepositoryImpl @Inject constructor() : MusicRepository {
                 Song(
                     id = songItem.id,
                     title = songItem.title,
-                    artists = songItem.artists.joinToString(", ") { it.name },
-                    thumbnailUrl = songItem.thumbnail?.url
+                    artist = songItem.artists.joinToString(", ") { it.name },
+                    album = "",
+                    artworkUrl = songItem.thumbnail?.url ?: "",
+                    durationMs = 0L,
+                    streamUrl = ""
                 )
             }
         } catch (e: Exception) {
             emptyList()
         }
+    }
+
+    override suspend fun getHomeContent(): List<Song> {
+        return search("Top Hits")
     }
 
     override suspend fun getStreamUrl(videoId: String): String? {
